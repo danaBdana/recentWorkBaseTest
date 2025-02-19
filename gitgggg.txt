@@ -1,0 +1,170 @@
+package baseTest;
+
+import com.l.MailTrap;
+import io.github.bonigarcia.wdm.WebDriverManager;
+import org.openqa.selenium.Capabilities;
+import org.openqa.selenium.MutableCapabilities;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.edge.EdgeDriver;
+import org.openqa.selenium.firefox.FirefoxDriver;
+import org.openqa.selenium.firefox.FirefoxOptions;
+import org.openqa.selenium.remote.DesiredCapabilities;
+import org.openqa.selenium.remote.RemoteWebDriver;
+import org.openqa.selenium.safari.SafariDriver;
+import org.openqa.selenium.safari.SafariOptions;
+import org.testng.annotations.*;
+import java.lang.reflect.Method;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import org.testng.ITestResult;
+import org.openqa.selenium.JavascriptExecutor;
+
+
+
+public class BaseTest {
+
+    static WebDriver driver;
+
+    public static WebDriver getDriver(){
+        return driver;
+    }
+
+    public static String buildName = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+    public static final String sauceUser = System.getenv("SAUCE_USERNAME");
+    public static final String sauceKey = System.getenv("SAUCE_ACCESS_KEY");
+    public static final String URL = "https://" + sauceUser + ":" + sauceKey
+            + "@ondemand.us-west-1.saucelabs.com:443/wd/hub";
+
+    public static final String emailToken = System.getenv("TOKEN_EMAIL");
+    public static final MailTrap mailTrap = new MailTrap(emailToken);
+
+    @Parameters({"browser", "browserVersion", "platformName",
+            "screenResolution", "environment", "loginWithUser"})
+    @BeforeMethod
+    public void setUp(
+            @Optional("someName") Method methodName,
+            @Optional("chromeIncognito") String browser, //chromeIncognito //firefoxPrivate //safari
+            @Optional("91.0") String browserVersion,
+            @Optional("Windows 10") String platformName,
+            @Optional("1440x900") String screenResolution,
+            @Optional("QA-SSO") String environment,
+            @Optional("loginLaQA") String loginWithUser) //loginLaQA //loginAgencyAdminQA // loginAgencyUserQA
+            throws MalformedURLException {
+
+        MutableCapabilities sauceOptions = new MutableCapabilities();
+        sauceOptions.setCapability("screenResolution", "1440x900");
+        sauceOptions.setCapability("build", "KMS " + environment+ " " + browser+ " " + buildName);
+        sauceOptions.setCapability("name", methodName.getName());
+
+        if(browser.equalsIgnoreCase("ChromeSL")) {
+            System.out.println("Testing on Chrome browser");
+            chromeOptions.setCapability("browserName", "Chrome");
+            chromeOptions.setCapability("browserVersion", "latest");
+            chromeOptions.setCapability("platformName", "Windows 10");
+            chromeOptions.setCapability("sauce:options", sauceOptions);
+
+            driver = new RemoteWebDriver(new URL(URL), chromeOptions);
+
+        }else if(browser.equalsIgnoreCase("SafariSL")) {
+            SafariOptions safariOptions = new SafariOptions();
+            System.out.println("Testing on Safari browser");
+            safariOptions.setCapability("browserName", "Safari");
+            safariOptions.setCapability("platform", "macOS 13");
+            safariOptions.setCapability("version", "latest");
+            safariOptions.setCapability("sauce:options", sauceOptions);
+
+            driver = new RemoteWebDriver(new URL(URL), safariOptions);
+
+        }else if(browser.equalsIgnoreCase("FirefoxSL")) {
+            FirefoxOptions firefoxOptions = new FirefoxOptions();
+            System.out.println("Testing on FF browser");
+            firefoxOptions.setCapability("platformName", "Windows 10");
+            firefoxOptions.setCapability("browserVersion", "latest");
+            firefoxOptions.setCapability("sauce:options", sauceOptions);
+
+            driver = new RemoteWebDriver(new URL(URL), firefoxOptions);
+
+        }else if(browser.equalsIgnoreCase("safari")) {
+            System.out.println("Testing on Safari browser");
+            driver = new SafariDriver();
+
+        }else if(browser.equalsIgnoreCase("firefoxPrivate")){
+            System.out.println("Testing on Firefox private browser");
+            WebDriverManager.firefoxdriver().setup();
+            driver = new FirefoxDriver();
+
+        }else if(browser.equalsIgnoreCase("edge")) {
+            System.out.println("Testing on Edge browser");
+            System.setProperty("webdriver.edge.driver", "drivers/edgeDriver/msedgedriver.exe");
+            driver = new EdgeDriver();
+        }
+
+        if(environment.equalsIgnoreCase("QA-SSO")) {
+            System.out.println("Testing on QA-SSO env'");
+            driver.get("https://policy-qa.l.com");
+        }
+
+        if(loginWithUser.equalsIgnoreCase("loginlaQA")){
+            System.out.println("Set up a cookie l Admin QA");
+            driver.manage().addCookie(JWTTest.setCookieLAdminQA());
+        }else if(loginWithUser.equalsIgnoreCase("loginAgencyAdminQA")){
+            System.out.println("Set up a cookie for Agency Admin QA");
+            driver.manage().addCookie(JWTTest.setCookieAgencyAdminQA());
+        }else if(loginWithUser.equalsIgnoreCase("loginAgencyUserQA")){
+            System.out.println("Set up a cookie for Agency User QA");
+            driver.manage().addCookie(JWTTest.setCookieAgencyUserQA());
+
+        }else if(loginWithUser.equalsIgnoreCase("loginDanasLlAdminQA")){
+            System.out.println("Set up a cookie for Dana's l Admin QA");
+            driver.manage().addCookie(JWTTest.setCookieAgencyAdminQA2());
+        }else if(loginWithUser.equalsIgnoreCase("loginDanasAgencyUserQA")){
+            System.out.println("Set up a cookie for Dana's Agency User QA");
+            driver.manage().addCookie(JWTTest.setCookieAgencyUserQA2());
+        }else if(loginWithUser.equalsIgnoreCase("loginDanasAgencyAdminQA")){
+            System.out.println("Set up a cookie for Dana's Agency Admin QA");
+            driver.manage().addCookie(JWTTest.setCookieAgencyAdminQA2());
+        }
+
+        driver.manage().window().maximize();
+        System.out.println("Screen resolution: " + driver.manage().window().getSize());
+        driver.navigate().refresh();
+        driver.manage().timeouts().implicitlyWait(10, TimeUnit.SECONDS);
+    }
+
+    ChromeOptions chromeOptions = new ChromeOptions();
+    FirefoxOptions firefoxOptions = new FirefoxOptions();
+
+    protected ChromeOptions getChromeIncognito(){
+        chromeOptions.addArguments("--incognito");
+        return chromeOptions;
+    }
+
+    protected FirefoxOptions getFireFoxPrivate(){
+        firefoxOptions.addArguments("-private");
+        return firefoxOptions;
+    }
+
+    @AfterMethod
+    public void printAfterTest(ITestResult result){
+        System.out.println("===============================================");
+        System.out.println(" ");
+        try{
+            ((JavascriptExecutor) driver).executeScript("sauce:job-result=" + (result.isSuccess() ? "passed" : "failed"));
+        } catch (Exception e){
+            System.out.println("Running locally");
+        }
+    }
+
+    @AfterClass
+    public void tearDown(){
+        driver.manage().timeouts().implicitlyWait(0, TimeUnit.SECONDS);
+        driver.quit();
+    }
+}
